@@ -1,0 +1,33 @@
+{
+  "name": "font-manager",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "tauri": "tauri",
+    "test:viewer": "esbuild scripts/check-viewer-export.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-viewer-export.mjs && node node_modules/.cache/check-viewer-export.mjs",
+    "test:palette": "esbuild scripts/check-palette.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-palette.mjs && node node_modules/.cache/check-palette.mjs",
+    "test:themes": "esbuild scripts/check-themes.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-themes.mjs && node node_modules/.cache/check-themes.mjs",
+    "test:features": "esbuild scripts/check-features.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-features.mjs && node node_modules/.cache/check-features.mjs"
+  },
+  "dependencies": {
+    "@internationalized/date": "^3.12.4",
+    "@lucide/svelte": "^1.77.0",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "@tauri-apps/plugin-opener": "^2.7.3",
+    "bits-ui": "^2.22.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6",
+    "@tauri-apps/cli": "^2",
+    "@tsconfig/svelte": "^5",
+    "svelte": "^5",
+    "svelte-check": "^4",
+    "typescript": "^5",
+    "vite": "^7"
+  }
+}

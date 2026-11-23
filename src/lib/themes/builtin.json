@@ -1,0 +1,416 @@
+[
+ {
+  "name": "One",
+  "author": "Zed Industries",
+  "themes": [
+   {
+    "name": "One Dark",
+    "appearance": "dark",
+    "style": {
+     "background": "#3b414dff",
+     "surface.background": "#2f343eff",
+     "elevated_surface.background": "#2f343eff",
+     "panel.background": "#2f343eff",
+     "editor.background": "#282c33ff",
+     "border": "#464b57ff",
+     "border.variant": "#363c46ff",
+     "border.focused": "#47679eff",
+     "element.hover": "#363c46ff",
+     "element.active": "#454a56ff",
+     "element.selected": "#454a56ff",
+     "ghost_element.hover": "#363c46ff",
+     "ghost_element.active": "#454a56ff",
+     "ghost_element.selected": "#454a56ff",
+     "text": "#dce0e5ff",
+     "text.muted": "#a9afbcff",
+     "text.accent": "#74ade8ff",
+     "icon.accent": "#74ade8ff",
+     "error": "#d07277ff",
+     "error.background": "#d072771a",
+     "warning": "#dec184ff",
+     "warning.background": "#dec1841a",
+     "success": "#a1c181ff",
+     "info": "#74ade8ff",
+     "status_bar.background": "#3b414dff"
+    },
+    "players": [
+     {
+      "cursor": "#74ade8ff"
+     }
+    ]
+   },
+   {
+    "name": "One Light",
+    "appearance": "light",
+    "style": {
+     "background": "#dcdcddff",
+     "surface.background": "#ebebecff",
+     "elevated_surface.background": "#ebebecff",
+     "panel.background": "#ebebecff",
+     "editor.background": "#fafafaff",
+     "border": "#c9c9caff",
+     "border.variant": "#dfdfe0ff",
+     "border.focused": "#7d82e8ff",
+     "element.hover": "#dfdfe0ff",
+     "element.active": "#cacacaff",
+     "element.selected": "#cacacaff",
+     "ghost_element.hover": "#dfdfe0ff",
+     "ghost_element.active": "#cacacaff",
+     "ghost_element.selected": "#cacacaff",
+     "text": "#242529ff",
+     "text.muted": "#58585aff",
+     "text.accent": "#5c78e2ff",
+     "icon.accent": "#5c78e2ff",
+     "error": "#d36151ff",
+     "error.background": "#fbdfd9ff",
+     "warning": "#a48819ff",
+     "warning.background": "#faf2e6ff",
+     "success": "#669f59ff",
+     "info": "#5c78e2ff",
+     "status_bar.background": "#dcdcddff"
+    },
+    "players": [
+     {
+      "cursor": "#5c78e2ff"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "Ayu",
+  "author": "Zed Industries",
+  "themes": [
+   {
+    "name": "Ayu Dark",
+    "appearance": "dark",
+    "style": {
+     "background": "#313337ff",
+     "surface.background": "#1f2127ff",
+     "elevated_surface.background": "#1f2127ff",
+     "panel.background": "#1f2127ff",
+     "editor.background": "#0d1016ff",
+     "border": "#3f4043ff",
+     "border.variant": "#2d2f34ff",
+     "border.focused": "#1b4a6eff",
+     "element.hover": "#2d2f34ff",
+     "element.active": "#3e4043ff",
+     "element.selected": "#3e4043ff",
+     "ghost_element.hover": "#2d2f34ff",
+     "ghost_element.active": "#3e4043ff",
+     "ghost_element.selected": "#3e4043ff",
+     "text": "#bfbdb6ff",
+     "text.muted": "#8a8986ff",
+     "text.accent": "#5ac1feff",
+     "icon.accent": "#5ac1feff",
+     "error": "#ef7177ff",
+     "error.background": "#48161bff",
+     "warning": "#feb454ff",
+     "warning.background": "#572815ff",
+     "success": "#aad84cff",
+     "info": "#5ac1feff",
+     "status_bar.background": "#313337ff"
+    },
+    "players": [
+     {
+      "cursor": "#5ac1feff"
+     }
+    ]
+   },
+   {
+    "name": "Ayu Light",
+    "appearance": "light",
+    "style": {
+     "background": "#dcdddeff",
+     "surface.background": "#ececedff",
+     "elevated_surface.background": "#ececedff",
+     "panel.background": "#ececedff",
+     "editor.background": "#fcfcfcff",
+     "border": "#cfd1d2ff",
+     "border.variant": "#dfe0e1ff",
+     "border.focused": "#c4daf6ff",
+     "element.hover": "#dfe0e1ff",
+     "element.active": "#cfd0d2ff",
+     "element.selected": "#cfd0d2ff",
+     "ghost_element.hover": "#dfe0e1ff",
+     "ghost_element.active": "#cfd0d2ff",
+     "ghost_element.selected": "#cfd0d2ff",
+     "text": "#5c6166ff",
+     "text.muted": "#8b8e92ff",
+     "text.accent": "#3b9ee5ff",
+     "icon.accent": "#3b9ee5ff",
+     "error": "#ef7271ff",
+     "error.background": "#ffe3e1ff",
+     "warning": "#f1ad49ff",
+     "warning.background": "#ffeedaff",
+     "success": "#85b304ff",
+     "info": "#3b9ee5ff",
+     "status_bar.background": "#dcdddeff"
+    },
+    "players": [
+     {
+      "cursor": "#3b9ee5ff"
+     }
+    ]
+   },
+   {
+    "name": "Ayu Mirage",
+    "appearance": "dark",
+    "style": {
+     "background": "#464a52ff",
+     "surface.background": "#353944ff",
+     "elevated_surface.background": "#353944ff",
+     "panel.background": "#353944ff",
+     "editor.background": "#242835ff",
+     "border": "#53565dff",
+     "border.variant": "#43464fff",
+     "border.focused": "#24556fff",
+     "element.hover": "#43464fff",
+     "element.active": "#53565dff",
+     "element.selected": "#53565dff",
+     "ghost_element.hover": "#43464fff",
+     "ghost_element.active": "#53565dff",
+     "ghost_element.selected": "#53565dff",
+     "text": "#cccac2ff",
+     "text.muted": "#9a9a98ff",
+     "text.accent": "#72cffeff",
+     "icon.accent": "#72cffeff",
+     "error": "#f18779ff",
+     "error.background": "#481a1bff",
+     "warning": "#fecf72ff",
+     "warning.background": "#574018ff",
+     "success": "#d5fe80ff",
+     "info": "#72cffeff",
+     "status_bar.background": "#464a52ff"
+    },
+    "players": [
+     {
+      "cursor": "#72cffeff"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "name": "Gruvbox",
+  "author": "Zed Industries",
+  "themes": [
+   {
+    "name": "Gruvbox Dark",
+    "appearance": "dark",
+    "style": {
+     "background": "#4c4642ff",
+     "surface.background": "#3a3735ff",
+     "elevated_surface.background": "#3a3735ff",
+     "panel.background": "#3a3735ff",
+     "editor.background": "#282828ff",
+     "border": "#5b534dff",
+     "border.variant": "#494340ff",
+     "border.focused": "#303a36ff",
+     "element.hover": "#494340ff",
+     "element.active": "#5b524cff",
+     "element.selected": "#5b524cff",
+     "ghost_element.hover": "#494340ff",
+     "ghost_element.active": "#5b524cff",
+     "ghost_element.selected": "#5b524cff",
+     "text": "#fbf1c7ff",
+     "text.muted": "#c5b597ff",
+     "text.accent": "#83a598ff",
+     "icon.accent": "#83a598ff",
+     "error": "#fb4a35ff",
+     "error.background": "#590a0fff",
+     "warning": "#f9bd2fff",
+     "warning.background": "#572e10ff",
+     "success": "#b7bb26ff",
+     "info": "#83a598ff",
+     "status_bar.background": "#4c4642ff"
+    },
+    "players": [
+     {
+      "cursor": "#83a598ff"
+     }
+    ]
+   },
+   {
+    "name": "Gruvbox Dark Hard",
+    "appearance": "dark",
+    "style": {
+     "background": "#4c4642ff",
+     "surface.background": "#393634ff",
+     "elevated_surface.background": "#393634ff",
+     "panel.background": "#393634ff",
+     "editor.background": "#1d2021ff",
+     "border": "#5b534dff",
+     "border.variant": "#494340ff",
+     "border.focused": "#303a36ff",
+     "element.hover": "#494340ff",
+     "element.active": "#5b524cff",
+     "element.selected": "#5b524cff",
+     "ghost_element.hover": "#494340ff",
+     "ghost_element.active": "#5b524cff",
+     "ghost_element.selected": "#5b524cff",
+     "text": "#fbf1c7ff",
+     "text.muted": "#c5b597ff",
+     "text.accent": "#83a598ff",
+     "icon.accent": "#83a598ff",
+     "error": "#fb4a35ff",
+     "error.background": "#590a0fff",
+     "warning": "#f9bd2fff",
+     "warning.background": "#572e10ff",
+     "success": "#b7bb26ff",
+     "info": "#83a598ff",
+     "status_bar.background": "#4c4642ff"
+    },
+    "players": [
+     {
+      "cursor": "#83a598ff"
+     }
+    ]
+   },
+   {
+    "name": "Gruvbox Dark Soft",
+    "appearance": "dark",
+    "style": {
+     "background": "#4c4642ff",
+     "surface.background": "#3b3735ff",
+     "elevated_surface.background": "#3b3735ff",
+     "panel.background": "#3b3735ff",
+     "editor.background": "#32302fff",
+     "border": "#5b534dff",
+     "border.variant": "#494340ff",
+     "border.focused": "#303a36ff",
+     "element.hover": "#494340ff",
+     "element.active": "#5b524cff",
+     "element.selected": "#5b524cff",
+     "ghost_element.hover": "#494340ff",
+     "ghost_element.active": "#5b524cff",
+     "ghost_element.selected": "#5b524cff",
+     "text": "#fbf1c7ff",
+     "text.muted": "#c5b597ff",
+     "text.accent": "#83a598ff",
+     "icon.accent": "#83a598ff",
+     "error": "#fb4a35ff",
+     "error.background": "#590a0fff",
+     "warning": "#f9bd2fff",
+     "warning.background": "#572e10ff",
+     "success": "#b7bb26ff",
+     "info": "#83a598ff",
+     "status_bar.background": "#4c4642ff"
+    },
+    "players": [
+     {
+      "cursor": "#83a598ff"
+     }
+    ]
+   },
+   {
+    "name": "Gruvbox Light",
+    "appearance": "light",
+    "style": {
+     "background": "#d9c8a4ff",
+     "surface.background": "#ecddb4ff",
+     "elevated_surface.background": "#ecddb4ff",
+     "panel.background": "#ecddb4ff",
+     "editor.background": "#fbf1c7ff",
+     "border": "#c8b899ff",
+     "border.variant": "#ddcca7ff",
+     "border.focused": "#adc5ccff",
+     "element.hover": "#ddcca7ff",
+     "element.active": "#c8b899ff",
+     "element.selected": "#c8b899ff",
+     "ghost_element.hover": "#ddcca7ff",
+     "ghost_element.active": "#c8b899ff",
+     "ghost_element.selected": "#c8b899ff",
+     "text": "#282828ff",
+     "text.muted": "#5f5650ff",
+     "text.accent": "#0b6678ff",
+     "icon.accent": "#0b6678ff",
+     "error": "#9d0308ff",
+     "error.background": "#f4d1c9ff",
+     "warning": "#b57615ff",
+     "warning.background": "#f5e2d0ff",
+     "success": "#797410ff",
+     "info": "#0b6678ff",
+     "status_bar.background": "#d9c8a4ff"
+    },
+    "players": [
+     {
+      "cursor": "#0b6678ff"
+     }
+    ]
+   },
+   {
+    "name": "Gruvbox Light Hard",
+    "appearance": "light",
+    "style": {
+     "background": "#d9c8a4ff",
+     "surface.background": "#ecddb5ff",
+     "elevated_surface.background": "#ecddb5ff",
+     "panel.background": "#ecddb5ff",
+     "editor.background": "#f9f5d7ff",
+     "border": "#c8b899ff",
+     "border.variant": "#ddcca7ff",
+     "border.focused": "#adc5ccff",
+     "element.hover": "#ddcca7ff",
+     "element.active": "#c8b899ff",
+     "element.selected": "#c8b899ff",
+     "ghost_element.hover": "#ddcca7ff",
+     "ghost_element.active": "#c8b899ff",
+     "ghost_element.selected": "#c8b899ff",
+     "text": "#282828ff",
+     "text.muted": "#5f5650ff",
+     "text.accent": "#0b6678ff",
+     "icon.accent": "#0b6678ff",
+     "error": "#9d0308ff",
+     "error.background": "#f4d1c9ff",
+     "warning": "#b57615ff",
+     "warning.background": "#f5e2d0ff",
+     "success": "#797410ff",
+     "info": "#0b6678ff",
+     "status_bar.background": "#d9c8a4ff"
+    },
+    "players": [
+     {
+      "cursor": "#0b6678ff"
+     }
+    ]
+   },
+   {
+    "name": "Gruvbox Light Soft",
+    "appearance": "light",
+    "style": {
+     "background": "#d9c8a4ff",
+     "surface.background": "#ecdcb3ff",
+     "elevated_surface.background": "#ecdcb3ff",
+     "panel.background": "#ecdcb3ff",
+     "editor.background": "#f2e5bcff",
+     "border": "#c8b899ff",
+     "border.variant": "#ddcca7ff",
+     "border.focused": "#adc5ccff",
+     "element.hover": "#ddcca7ff",
+     "element.active": "#c8b899ff",
+     "element.selected": "#c8b899ff",
+     "ghost_element.hover": "#ddcca7ff",
+     "ghost_element.active": "#c8b899ff",
+     "ghost_element.selected": "#c8b899ff",
+     "text": "#282828ff",
+     "text.muted": "#5f5650ff",
+     "text.accent": "#0b6678ff",
+     "icon.accent": "#0b6678ff",
+     "error": "#9d0308ff",
+     "error.background": "#f4d1c9ff",
+     "warning": "#b57615ff",
+     "warning.background": "#f5e2d0ff",
+     "success": "#797410ff",
+     "info": "#0b6678ff",
+     "status_bar.background": "#d9c8a4ff"
+    },
+    "players": [
+     {
+      "cursor": "#0b6678ff"
+     }
+    ]
+   }
+  ]
+ }
+]

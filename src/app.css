@@ -1,0 +1,312 @@
+/* =============================================================================
+   Design tokens. DESIGN.md explains the system; this file is its source.
+
+   The chrome is deliberately quiet: every specimen on screen is a different
+   typeface, so the interface uses the platform's own UI font and colour only
+   where it carries meaning:
+
+     cyan     active (switched on, selected, primary action)
+     magenta  two live fonts claim the same name — and nothing else
+     red      errors and destructive actions
+     amber    warnings
+
+   Each role has three forms: `--x` for text and icons on the sheet, `--x-solid`
+   with `--x-on` for filled surfaces, and `--x-soft` for tinted backgrounds.
+   Text and solid pairs meet WCAG AA (4.5:1) in both themes.
+   ========================================================================== */
+
+:root {
+  /* Surfaces */
+  --lightbox: #e8ebee;   /* app ground, sidebar */
+  --sheet: #ffffff;      /* where specimens sit */
+  --raised: #ffffff;     /* menus, popovers, dialogs */
+  --hover: #f1f3f5;
+  --pressed: #e6e9ec;
+  --selected: #e3f2f8;   /* cyan-tinted selection */
+
+  /* Ink */
+  --ink: #15181c;
+  --muted: #5f6873;      /* 5.6:1 on sheet */
+  --faint: #d5dade;      /* separators, slider tracks */
+  /* Where two panes meet: a step heavier than the hairlines inside them. */
+  --pane-rule-width: 2px;
+  --line: #c4cad0;       /* control borders */
+
+  /* Roles */
+  --cyan: #006a93;
+  --cyan-solid: #006a93;
+  --cyan-on: #ffffff;
+  --cyan-soft: #e3f2f8;
+  --magenta: #b8005f;
+  --magenta-soft: #fbe6f0;
+  --red: #c22a1d;
+  --red-solid: #c22a1d;
+  --red-on: #ffffff;
+  --red-soft: #fdebe9;
+  --amber: #8a5a00;
+  --amber-soft: #fdf3dc;
+
+  --focus: #0089c2;
+  --overlay: rgb(10 14 18 / 0.32);
+  --shadow-float:
+    0 0 0 1px rgb(15 20 25 / 0.08),
+    0 8px 24px -6px rgb(15 20 25 / 0.18),
+    0 2px 6px -2px rgb(15 20 25 / 0.12);
+
+  /* Type: the platform's UI font, a five-step scale for chrome */
+  --ui: system-ui, -apple-system, "Segoe UI", Cantarell, Ubuntu, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --text-1: 0.75rem;     /* 12  meta, counts, captions */
+  --text-2: 0.8125rem;   /* 13  body, controls */
+  --text-3: 0.9375rem;   /* 15  emphasis, sample input */
+  --text-4: 1.125rem;    /* 18  section headings */
+  --text-5: 1.375rem;    /* 22  page titles */
+  --weight-strong: 600;
+
+  /* Space: 4px grid */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 48px;
+
+  /* Radius by element size */
+  --r-1: 4px;            /* checkboxes, small chips */
+  --r-2: 6px;            /* buttons, inputs, nav items */
+  --r-3: 10px;           /* floating panels, cards */
+  --r-full: 999px;
+
+  /* Control heights */
+  --control-sm: 24px;
+  --control: 30px;
+
+  /* Motion: only in response to the user */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* Defaults matching Snappy; lib/motion.svelte.ts sets these on <html>
+     from the Motion setting. */
+  --dur-fast: 90ms;
+  --dur: 140ms;
+  --dur-pane: 180ms;
+  --dur-slow: 220ms;
+
+  /* Stacking, bottom to top. Floating layers (menus, selects, popovers,
+     tooltips) sit above every window and dialog, because they can open from
+     inside one. */
+  --z-bar: 5;          /* selection bar over the list */
+  --z-panel: 10;       /* inspector overlaying a narrow window */
+  --z-window: 50;      /* Settings */
+  --z-dialog: 60;      /* confirmations and prompts, above Settings */
+  --z-palette: 70;     /* command palette */
+  --z-float: 80;       /* menus, selects, popovers */
+  --z-tooltip: 90;
+  --z-drag: 100;       /* drag ghost */
+
+  /* Layout */
+  --rail: 236px;
+  --inspector: 400px;
+
+  color-scheme: light;
+}
+
+/* Dark: system preference unless Light is chosen, or Dark is chosen. Kept as
+   two identical blocks because a media query can't share a rule with an
+   attribute selector. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lightbox: #101214;
+    --sheet: #17191c;
+    --raised: #1f2226;
+    --hover: #202328;
+    --pressed: #2a2e33;
+    --selected: #0f2a35;
+    --ink: #e9ecef;
+    --muted: #9aa3ad;
+    --faint: #2b3036;
+    --line: #3a4047;
+    --cyan: #4cc3ec;
+    --cyan-solid: #3fb4e6;
+    --cyan-on: #06141a;
+    --cyan-soft: #0f2a35;
+    --magenta: #ff6fb3;
+    --magenta-soft: #3a1328;
+    --red: #ff7b6e;
+    --red-solid: #c8372a;
+    --red-on: #ffffff;
+    --red-soft: #3a1714;
+    --amber: #f0b64c;
+    --amber-soft: #33270f;
+    --focus: #4cc3ec;
+    --overlay: rgb(0 0 0 / 0.55);
+    --shadow-float:
+      0 0 0 1px rgb(255 255 255 / 0.08),
+      0 12px 32px -8px rgb(0 0 0 / 0.6),
+      0 2px 8px -2px rgb(0 0 0 / 0.4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --lightbox: #101214;
+  --sheet: #17191c;
+  --raised: #1f2226;
+  --hover: #202328;
+  --pressed: #2a2e33;
+  --selected: #0f2a35;
+  --ink: #e9ecef;
+  --muted: #9aa3ad;
+  --faint: #2b3036;
+  --line: #3a4047;
+  --cyan: #4cc3ec;
+  --cyan-solid: #3fb4e6;
+  --cyan-on: #06141a;
+  --cyan-soft: #0f2a35;
+  --magenta: #ff6fb3;
+  --magenta-soft: #3a1328;
+  --red: #ff7b6e;
+  --red-solid: #c8372a;
+  --red-on: #ffffff;
+  --red-soft: #3a1714;
+  --amber: #f0b64c;
+  --amber-soft: #33270f;
+  --focus: #4cc3ec;
+  --overlay: rgb(0 0 0 / 0.55);
+  --shadow-float:
+    0 0 0 1px rgb(255 255 255 / 0.08),
+    0 12px 32px -8px rgb(0 0 0 / 0.6),
+    0 2px 8px -2px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+}
+
+/* ===== Base ================================================================ */
+
+* { box-sizing: border-box; }
+
+html, body, #app { height: 100%; margin: 0; }
+
+body {
+  background: var(--lightbox);
+  color: var(--ink);
+  font: var(--text-2) / 1.45 var(--ui);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+button:disabled { cursor: default; }
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  /* No border-radius here: the outline follows each element's own shape,
+     and forcing one would square off round controls like slider thumbs. */
+}
+
+input[type="text"], input[type="search"], input[type="password"] {
+  min-width: 0;
+}
+
+/* A specimen that has not loaded shows nothing rather than fallback glyphs.
+   The placeholder bar reserves the line so rows don't jump on load. */
+[data-state="loading"] {
+  color: transparent !important;
+  background: linear-gradient(var(--hover), var(--hover)) left center / min(60%, 28ch) 0.6em no-repeat;
+  user-select: none;
+}
+
+[data-state="error"] {
+  color: transparent !important;
+  position: relative;
+}
+[data-state="error"]::after {
+  content: "This face could not be loaded for preview.";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  font: var(--text-2) var(--ui);
+  color: var(--red);
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Floating layers (menus, selects, tooltips) are portalled to <body>, so their
+   shared entrance lives here rather than in a component. */
+@keyframes float-in {
+  from { opacity: 0; transform: scale(0.97); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes tab-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+@keyframes font-in {
+  from { opacity: 0; }
+}
+
+/* Motion: None. Durations are already zero, but stray hard-coded ones, and
+   keyframes that would flash their first frame, are stopped here too. A
+   system request for reduced motion selects None unless the person chose
+   otherwise in Settings (lib/motion.svelte.ts). */
+:root[data-motion="none"] *,
+:root[data-motion="none"] *::before,
+:root[data-motion="none"] *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* A specimen whose font had to load fades in; one already loaded appears at
+   once, so scrolling back through the list never flickers. */
+[data-state="loaded"][data-fresh] {
+  animation: font-in var(--dur-slow) var(--ease);
+}
+
+/* Dragging a family onto a collection or tag (see lib/drag.ts). The ghost
+   is a label that follows the pointer; targets highlight when it's over them. */
+.fm-drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: var(--z-drag);
+  pointer-events: none;
+  max-width: 240px;
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--r-2);
+  background: var(--raised);
+  box-shadow: var(--shadow-float);
+  color: var(--ink);
+  font: 500 var(--text-2) / 1.6 var(--ui);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fm-drag-ghost[data-over='true'] {
+  background: var(--cyan-solid);
+  color: var(--cyan-on);
+}
+body.fm-dragging,
+body.fm-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+[data-drop][data-drop-over] {
+  background: var(--selected) !important;
+  box-shadow: inset 0 0 0 1px var(--cyan-solid) !important;
+}
