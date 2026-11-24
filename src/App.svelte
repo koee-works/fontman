@@ -41,7 +41,7 @@
   import FamilyContextMenu from './lib/FamilyContextMenu.svelte';
   import OutlinePanel from './lib/OutlinePanel.svelte';
   import { drawer, motion } from './lib/motion.svelte';
-  import { compare } from './lib/compare.svelte';
+  import { compare } from './lib/compare-state.svelte';
   import { onDrop, type DragPayload } from './lib/drag';
   import TagMenu from './lib/ui/TagMenu.svelte';
   import CommandPalette from './lib/CommandPalette.svelte';

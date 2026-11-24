@@ -1,6 +1,6 @@
 <script lang="ts">
   import { api, type FaceDetail, type FamilySummary } from './api';
-  import { compare, type Pick, type Side } from './compare.svelte';
+  import { compare, type Pick, type Side } from './compare-state.svelte';
   import { specimen } from './fonts';
   import FontPicker from './ui/FontPicker.svelte';
   import Icon from './ui/Icon.svelte';
