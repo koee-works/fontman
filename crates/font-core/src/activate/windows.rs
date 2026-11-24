@@ -110,7 +110,7 @@ impl FontActivator for WindowsActivator {
         // GDI reference-counts registrations; loop until it reports none left,
         // otherwise a font registered twice stays active after one removal.
         let mut guard = 0;
-        while unsafe { RemoveFontResourceExW(PCWSTR(wpath.as_ptr()), FONT_RESOURCE_CHARACTERISTICS(0), None) }.as_bool() {
+        while unsafe { RemoveFontResourceExW(PCWSTR(wpath.as_ptr()), 0, None) }.as_bool() {
             guard += 1;
             if guard > 64 {
                 break;
