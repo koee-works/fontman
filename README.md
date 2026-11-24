@@ -458,13 +458,56 @@ the family. The target highlights while you're over it, and Escape cancels.
 A plain click still opens the inspector; a drag starts only once the pointer
 has moved a few pixels.
 
+### Updating
+
+Installed copies update in place, and keep everything: watched folders,
+collections, tags, activated fonts, the Google key, themes and every setting.
+
+- **From the app.** Font Manager checks GitHub for a newer release when it
+  starts (Settings → About can turn that off) and shows **Update to x.y.z** in
+  the status bar. **Update and restart** in Settings → About downloads it,
+  installs it and restarts. Nothing installs until you choose it. Updates are
+  signed in the release workflow, and the app refuses any whose signature
+  doesn't match the key it was built with. Windows, macOS and the Linux
+  AppImage update this way; a Linux .deb or .rpm can't replace itself, so
+  About links to the releases page instead.
+- **By installing a new version** over the old one, from the releases page.
+  Uninstalling and reinstalling keeps your data too, unless you tick the
+  uninstaller's box to delete app data.
+
+Why nothing is lost:
+
+- Everything the app keeps is in its data folder (named after the bundle
+  identifier, `dev.fontmanager.app`, which must never change), not where the
+  app is installed. Installers and the updater only replace the app itself.
+- Interface settings live in the webview's storage, which an uninstall can
+  clear, so they're mirrored to `ui-settings.json` in the data folder and put
+  back at startup. The first launch of a version with this file copies what the
+  webview already had, so settings from earlier versions carry over.
+- The first time a new version starts, before the database is opened (and
+  possibly migrated), the library database, settings, tag settings and
+  imported themes are copied to `backups/<time>-from-<old version>`. The last
+  five are kept. Settings → About → **Show backups** opens the folder.
+  Caches (the Google catalog and previews, extracted collection faces) aren't
+  backed up; they're rebuilt as needed.
+
+**Releasing an update:** bump the version in `package.json`,
+`src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`, run the Release
+workflow, then publish its draft. The workflow signs the update files with the
+`TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository
+secrets and attaches `latest.json`, which installed copies read from the latest
+published release. Releases aren't marked pre-release, because GitHub's
+"latest release" link skips those. Losing the private key means existing
+installs can't update in-app any more; they'd need one manual install of a
+build signed with a new key.
+
 ## What's verified, and how
 
 Everything below was run, not just written. Linux is where it ran.
 
 | Area | Status |
 |---|---|
-| Tests | 81 pass, including 4 against every installed font and 2 against a mock Google Fonts server. Clippy clean. `npm run test:viewer` checks the pairing model and CSS/JSON export; `npm run test:features` the feature catalogue; `npm run test:query` search syntax, filters with counts and sorting |
+| Tests | 85 pass, including 4 against every installed font and 2 against a mock Google Fonts server. Clippy clean. `npm run test:viewer` checks the pairing model and CSS/JSON export; `npm run test:features` the feature catalogue; `npm run test:query` search syntax, filters with counts and sorting |
 | TTC extraction | All 83 faces from 15 real collections (incl. 20 MB Noto CJK, CFF) pass fontTools with strict checksums and match the source face's glyphs, cmap and names |
 | Frontend | `svelte-check`: 0 errors, 0 warnings. 31 KB gzipped |
 | Large libraries | Measured in the running app against 10,000+ fonts; see below |
@@ -472,6 +515,7 @@ Everything below was run, not just written. Linux is where it ran.
 | Key storage | File fallback tested (owner-only permissions confirmed). **The OS keychain path is untested**: the build machine had no keychain daemon |
 | Lucide icons | Every icon name in the app type-checks against the map in `Icon.svelte`, so none can be missing. Candidates were compared on a contact sheet at 16 and 32 px. In the real app: sidebar, rows, status bar, inspector, right-click menu and Settings. Changed after seeing it: Lucide's `contrast` read as a "D" at 16 px, so "some styles on" is Lucide's circle with its right half filled |
 | Search, filters, sorting | Unit tests (`test:query`) for search syntax, typo fallback, every facet, counts with other filters applied, any/all matching and each order. In a browser harness with real font files: each library and Google filter panel, weight bars lining up with the handles, sorting, typo search, `-` exclusion, Google's grid and list with typed samples loading full fonts, the closer look, and Activate sending one download-and-activate request. **Not yet run in the Tauri app**, and download-and-activate is untested against Google's live API |
+| Updates | Unit tests: no backup on a first install or a relaunch of the same version; a new version (or an older build without a version file) backs up the database, settings and themes but not caches; only the newest five backups are kept; the settings file round-trips and ignores a corrupt file. Real app on Linux: the first launch backed up an existing library (database with its WAL) and seeded `ui-settings.json` from the webview's settings; a second launch made no new backup. Harness: settings from the file override the webview's and changes are written back; an available update shows in the status bar and in About with its notes. **The download-and-install step hasn't run yet**: it needs the signing key added as repository secrets and two published releases |
 | Motion | Harness: each mode writes its timings, and the rail is caught mid-slide (margin −147px at 60ms of Snappy). The inspector slides in, a tab panel runs its entrance, and the palette animates open and stays mounted while it animates closed. Under None, panes and the palette change instantly. The choice survives a theme change and a reload. Real app: the setting in Settings, and the sidebar sliding open frame by frame. Found and fixed: applying a theme cleared every custom property on `<html>`, motion's timings included |
 | Outlines & metrics | Rust: path, point and handle building tested on a hand-made contour; on installed fonts, heights in order, H's top at the cap height, and nothing for a missing character. Against fontTools on Inter: H, g and a match on advance, side bearings, bounds and contours, as do the stated x-height and cap height. Real app: Ctrl+J and the status-bar icon; with and without the inspector, where the last font stays; Fill, Points and Smoothing; dragging the panel taller with Fit following; a typed size; selecting a glyph. Found and fixed: the drawing widening the list's column, the header pushing out the close button in narrow panels, and the slider rounding a fitted size and turning Fit off |
 | OpenType features | Rust, against fontTools on Inter 4: the feature tags with lookups, stylistic set and variant names (cv05 "Lower-case L with tail"), and every truncation of a hand-built GSUB failing safely. `npm run test:features`: hidden and unknown tags, names, ordering, defaults, exclusive pairs, CSS output. Real app with Inter: real fractions (½) when previewing `frac`, wider tabular figures, the cv03 preview changing exactly the 6, small caps carrying to the Specimen tab, and the tab counting changes. Harness: exclusivity, the reset staying reachable while a feature is focused |

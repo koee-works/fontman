@@ -6,6 +6,17 @@ import { invoke } from '@tauri-apps/api/core';
 export type FontFormat = 'truetype' | 'opentype' | 'collection' | 'unsupported';
 export type FamilyActivation = 'none' | 'partial' | 'all';
 
+/** The app's version, and where its data and backups are. */
+export interface AppInfo {
+  version: string;
+  /** Set on the first launch after an update: the version before. */
+  updatedFrom: string | null;
+  backupsDir: string;
+  dataDir: string;
+  /** False for Linux .deb/.rpm installs, which update another way. */
+  canSelfUpdate: boolean;
+}
+
 export interface FaceSummary {
   id: string;
   subfamily: string;
@@ -322,6 +333,7 @@ export const api = {
     invoke<ToggleResult[]>('set_faces_active', { ids, active }),
   conflicts: () => invoke<ConflictReport>('conflicts'),
 
+  appInfo: () => invoke<AppInfo>('app_info'),
   googleSettings: () => invoke<GoogleSettings>('google_settings'),
   /** Checks the key with Google before saving; a rejected key is not saved. */
   saveGoogleKey: (key: string) => invoke<SaveKeyResult>('save_google_key', { key }),

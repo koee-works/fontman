@@ -26,7 +26,8 @@
   import Segmented from './lib/ui/Segmented.svelte';
   import Inspector from './lib/Inspector.svelte';
   import VirtualList from './lib/VirtualList.svelte';
-  import Settings from './lib/Settings.svelte';
+  import Settings, { type SettingsPage } from './lib/Settings.svelte';
+  import { updates } from './lib/updates.svelte';
   import SettingsWindow from './lib/SettingsWindow.svelte';
   import GoogleFonts from './lib/GoogleFonts.svelte';
   import { liveStatus, mark, painted, perfEnabled } from './lib/perf';
@@ -73,6 +74,11 @@
 
   let view = $state<View>('library');
   let settingsOpen = $state(false);
+  let settingsPage = $state<SettingsPage>('appearance');
+  function openSettings(page?: SettingsPage) {
+    if (page) settingsPage = page;
+    settingsOpen = true;
+  }
   let paletteOpen = $state(false);
   /** The sidebar can be hidden (Ctrl/⌘+B), as in Zed. Remembered. */
   let railOpen = $state(
@@ -1078,6 +1084,7 @@
     add({ id: 'view.inspector', group: 'View', title: inspectorShown ? 'Hide inspector' : 'Show inspector', shortcut: keys('B', false, true), run: toggleInspector });
     add(inspectorShown && { id: 'view.inspector-wide', group: 'View', title: wide ? 'Restore inspector width' : 'Expand inspector', run: () => (wide = !wide) });
     add({ id: 'app.settings', group: 'App', title: 'Open settings', keywords: 'preferences', shortcut: keys(','), run: () => (settingsOpen = true) });
+    add({ id: 'app.updates', group: 'App', title: 'Check for updates', keywords: 'upgrade new version install', run: () => { openSettings('about'); void updates.check(); } });
     // Library
     add({ id: 'library.check', group: 'Library', title: 'Check for changes', keywords: 'rescan refresh scan', run: () => scan() });
     add({ id: 'library.rescan-folder', group: 'Library', title: 'Rescan a folder…', run: pickAndRescan });
@@ -1217,6 +1224,16 @@
   }
 
   onMount(() => {
+    // The version, a note after an update, and a quiet check for a newer one.
+    updates.init().then(() => {
+      const i = updates.info;
+      if (i?.updatedFrom) {
+        notice = {
+          tone: 'info',
+          text: `Updated to ${i.version}${i.updatedFrom === 'earlier' ? '' : ` from ${i.updatedFrom}`}. Your library and settings were kept, and backed up first.`,
+        };
+      }
+    });
     const unlisten = listen<ScanProgress>('scan-progress', (e) => (progress = e.payload));
     // The folder watcher found and indexed changes: show them.
     const unlistenChange = listen<ScanSummary>('library-changed', async (e) => {
@@ -1927,6 +1944,17 @@
         </button>
       {/if}
     {/if}
+    {#if updates.status === 'available' && updates.available}
+      <button class="status-item link update" onclick={() => openSettings('about')}>
+        <Icon name="download" size={14} />
+        Update to {updates.available.version}
+      </button>
+    {:else if updates.status === 'downloading' || updates.status === 'installing'}
+      <button class="status-item link" onclick={() => openSettings('about')}>
+        <Icon name="download" size={14} />
+        {updates.status === 'installing' ? 'Installing update…' : 'Downloading update…'}
+      </button>
+    {/if}
     <IconButton icon="command" size="sm" label="Command palette ({keys('P', true)})" onclick={() => (paletteOpen = true)} />
     <IconButton icon="gear" size="sm" label="Settings ({keys(',')})" onclick={() => (settingsOpen = true)} />
     <span class="panes">
@@ -1976,6 +2004,7 @@
 
 <SettingsWindow bind:open={settingsOpen}>
   <Settings
+    bind:page={settingsPage}
     onKeyChanged={(g) => (googleKeySaved = g.keySaved)}
     {tags}
     tagCount={taggedCount}
@@ -2129,6 +2158,10 @@
   }
 
   /* Status bar ----------------------------------------------------------- */
+  .status-item.update {
+    color: var(--cyan);
+    font-weight: 500;
+  }
   .status-bar {
     grid-column: 1 / -1;
     grid-row: 3;

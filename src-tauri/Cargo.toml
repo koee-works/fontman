@@ -1,6 +1,6 @@
 [package]
 name = "font-manager"
-version = "0.2.0"
+version = "0.3.0"
 description = "Cross-platform font manager with face-level activation"
 edition.workspace = true
 rust-version.workspace = true
@@ -18,6 +18,9 @@ font-core = { path = "../crates/font-core" }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
+# In-app updates, signed, from GitHub releases; and restarting into them.
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 percent-encoding = "2"
 # Folder watching (inotify, FSEvents, ReadDirectoryChangesW).
 notify = "8"

@@ -44,10 +44,20 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Signs the update files the in-app updater downloads. The app only
+          # installs updates signed with this key (its public half is in
+          # tauri.conf.json), so keep it safe: a lost key means no more
+          # in-app updates for existing installs.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
           releaseName: "Font Manager v__VERSION__"
-          releaseBody: "First release. Builds are unsigned; see the README for install notes."
+          releaseBody: "See the README for install notes. Installed copies update from Settings → About; your library and settings are kept."
+          # Drafts until published by hand. Not pre-releases: the updater
+          # follows GitHub's "latest release", which skips those.
           releaseDraft: true
-          prerelease: true
+          prerelease: false
+          # latest.json, which the in-app updater reads.
+          includeUpdaterJson: true
           args: --features custom-protocol

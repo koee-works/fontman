@@ -10,6 +10,7 @@ mod google_cmds;
 mod library_cmds;
 mod secrets;
 mod theme_cmds;
+mod upgrade;
 mod watch;
 
 use font_core::activate::{platform_activator, ActivationHandle, ActivationService, FontActivator};
@@ -802,11 +803,58 @@ fn build_state(app_data: &Path) -> Result<AppState, Box<dyn std::error::Error>> 
     })
 }
 
+/// What the app knows about its own version and data, for Settings.
+struct AppInfoState {
+    upgrade: upgrade::UpgradeInfo,
+    app_data: PathBuf,
+    version: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppInfo {
+    version: String,
+    /// Set on the first launch after an update.
+    updated_from: Option<String>,
+    backups_dir: PathBuf,
+    data_dir: PathBuf,
+    /// False where the in-app updater can't replace the app: Linux .deb and
+    /// .rpm installs, which update through the package manager or a new
+    /// download. AppImages, Windows and macOS can.
+    can_self_update: bool,
+}
+
+#[tauri::command]
+fn app_info(info: tauri::State<'_, AppInfoState>) -> AppInfo {
+    AppInfo {
+        version: info.version.clone(),
+        updated_from: info.upgrade.previous.clone(),
+        backups_dir: info.upgrade.backups_dir.clone(),
+        data_dir: info.app_data.clone(),
+        can_self_update: !cfg!(target_os = "linux") || std::env::var_os("APPIMAGE").is_some(),
+    }
+}
+
+#[tauri::command]
+fn load_ui_settings(info: tauri::State<'_, AppInfoState>) -> Option<serde_json::Map<String, serde_json::Value>> {
+    upgrade::load_settings(&info.app_data)
+}
+
+#[tauri::command]
+fn save_ui_settings(
+    info: tauri::State<'_, AppInfoState>,
+    settings: serde_json::Map<String, serde_json::Value>,
+) -> Result<(), String> {
+    upgrade::save_settings(&info.app_data, &settings).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .register_asynchronous_uri_scheme_protocol("font", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             // font://localhost/<id> on macOS/Linux, http://font.localhost/<id> on
@@ -830,13 +878,22 @@ pub fn run() {
             });
         })
         .setup(|app| {
-            let state = build_state(&app.path().app_data_dir()?)?;
+            let app_data = app.path().app_data_dir()?;
+            let version = app.package_info().version.to_string();
+            // Back up before the index is opened, which may migrate it.
+            let upgrade = upgrade::prepare(&app_data, &version);
+            let state = build_state(&app_data)?;
             reconcile(&state);
             app.manage(state);
+            app.manage(AppInfoState { upgrade, app_data: app_data.clone(), version: version.clone() });
+            upgrade::record(&app_data, &version);
             watch::start(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            app_info,
+            load_ui_settings,
+            save_ui_settings,
             library_status,
             scan_library,
             add_root,

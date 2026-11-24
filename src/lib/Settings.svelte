@@ -1,6 +1,11 @@
+<script lang="ts" module>
+  export type SettingsPage = 'appearance' | 'library' | 'google' | 'tags' | 'about';
+</script>
+
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { openUrl } from '@tauri-apps/plugin-opener';
+  import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener';
+  import { updates, RELEASES_URL } from './updates.svelte';
   import { api, type GoogleSettings, type Tag, type WatchStatus } from './api';
   import TagManager from './TagManager.svelte';
   import { theme, type Appearance, type ThemePreference } from './theme.svelte';
@@ -26,9 +31,19 @@
     onRenameTag: (t: Tag) => void;
     onDeleteTag: (t: Tag) => void;
     onTagsChanged: () => void;
+    /** The page shown; the app opens About to show an update. */
+    page?: Page;
   }
-  let { onKeyChanged, tags, tagCount, onNewTag, onRenameTag, onDeleteTag, onTagsChanged }: Props =
-    $props();
+  let {
+    onKeyChanged,
+    tags,
+    tagCount,
+    onNewTag,
+    onRenameTag,
+    onDeleteTag,
+    onTagsChanged,
+    page = $bindable('appearance'),
+  }: Props = $props();
 
   const links = {
     console: 'https://console.cloud.google.com/',
@@ -123,7 +138,7 @@
 
   // -- Pages and search, after Zed's settings window -------------------------
 
-  type Page = 'appearance' | 'library' | 'google' | 'tags' | 'about';
+  type Page = SettingsPage;
   const pages: { id: Page; label: string; icon: IconName }[] = [
     { id: 'appearance', label: 'Appearance', icon: 'palette' },
     { id: 'library', label: 'Library', icon: 'library' },
@@ -131,7 +146,6 @@
     { id: 'tags', label: 'Tags', icon: 'tags' },
     { id: 'about', label: 'About', icon: 'info' },
   ];
-  let page = $state<Page>('appearance');
   let query = $state('');
   let body = $state<HTMLDivElement>();
   let flash = $state<string | null>(null);
@@ -148,7 +162,9 @@
     { page: 'google', id: 'set-downloads', title: 'Download folder', words: 'google fonts downloads' },
     { page: 'tags', id: 'set-google-tags', title: 'Tags from Google Fonts', words: 'import strength' },
     { page: 'tags', id: 'set-tags', title: 'Your tags', words: 'rename delete new tag' },
-    { page: 'about', id: 'set-version', title: 'Version', words: 'about' },
+    { page: 'about', id: 'set-version', title: 'Version and updates', words: 'about update upgrade new version check install restart' },
+    { page: 'about', id: 'set-auto-update', title: 'Check for updates at startup', words: 'automatic update' },
+    { page: 'about', id: 'set-backups', title: 'Your data and backups', words: 'backup restore settings library folder data' },
     { page: 'about', id: 'set-credits', title: 'Theme credits and licences', words: 'mit licence license' },
     { page: 'about', id: 'set-icons', title: 'Icons', words: 'lucide feather isc licence license credits' },
   ];
@@ -471,11 +487,89 @@
         />
       </div>
     {:else}
+      {@const u = updates}
       <div class="setting" id="set-version" class:flash={flash === 'set-version'}>
         <div class="text">
-          <p class="label">Font Manager</p>
-          <p class="help">Version 0.1.0</p>
+          <p class="label">Font Manager {u.info?.version ?? ''}</p>
+          <p class="help" aria-live="polite">
+            {#if u.info && !u.info.canSelfUpdate}
+              This copy was installed as a Linux package, which can't replace itself. New versions
+              are on GitHub; installing one keeps your library and settings.
+            {:else if u.status === 'checking'}
+              Checking for updates…
+            {:else if u.status === 'current'}
+              You have the latest version.
+            {:else if u.status === 'available' && u.available}
+              Version {u.available.version} is available.
+            {:else if u.status === 'downloading'}
+              Downloading {u.available?.version}{u.total ? `: ${Math.round((u.received / u.total) * 100)}%` : '…'}
+            {:else if u.status === 'installing'}
+              Installing. Font Manager will restart.
+            {:else if u.status === 'error'}
+              <span class="error-text">{u.error}</span>
+            {:else}
+              Updates come from this project's releases on GitHub.
+            {/if}
+          </p>
         </div>
+        {#if u.info && !u.info.canSelfUpdate}
+          <Button size="sm" icon="external" onclick={() => openUrl(RELEASES_URL)}>Open releases</Button>
+        {:else if u.status === 'available'}
+          <Button size="sm" variant="solid" tone="accent" icon="download" onclick={() => u.install()}>
+            Update and restart
+          </Button>
+        {:else}
+          <Button
+            size="sm"
+            icon="refresh"
+            disabled={u.status === 'checking' || u.status === 'downloading' || u.status === 'installing'}
+            onclick={() => u.check()}
+          >
+            Check for updates
+          </Button>
+        {/if}
+      </div>
+      {#if u.status === 'available' && u.available?.notes}
+        <div class="notes">
+          <p class="label">What's new in {u.available.version}</p>
+          <p class="help">{u.available.notes}</p>
+        </div>
+      {/if}
+      {#if u.info?.canSelfUpdate}
+        <div class="setting" id="set-auto-update" class:flash={flash === 'set-auto-update'}>
+          <div class="text">
+            <p class="label">Check for updates at startup</p>
+            <p class="help">Nothing installs without you choosing Update and restart.</p>
+          </div>
+          <Segmented
+            label="Check for updates at startup"
+            items={[
+              { value: 'on', label: 'On' },
+              { value: 'off', label: 'Off' },
+            ]}
+            value={u.auto ? 'on' : 'off'}
+            onValueChange={(v) => u.setAuto(v === 'on')}
+          />
+        </div>
+      {/if}
+      <div class="setting" id="set-backups" class:flash={flash === 'set-backups'}>
+        <div class="text">
+          <p class="label">Your data and backups</p>
+          <p class="help">
+            Your folders, collections, tags, activated fonts and settings are kept in the app's data
+            folder, which updates and reinstalls leave alone. The first time a new version starts,
+            it copies them into a backup first; the last five are kept.
+            {#if u.info?.updatedFrom}
+              This version was updated from {u.info.updatedFrom === 'earlier' ? 'an earlier version' : u.info.updatedFrom},
+              and a backup was made.
+            {/if}
+          </p>
+        </div>
+        {#if u.info}
+          <Button size="sm" icon="reveal" onclick={() => u.info && revealItemInDir(u.info.backupsDir).catch(() => revealItemInDir(u.info!.dataDir).catch(() => {}))}>
+            Show backups
+          </Button>
+        {/if}
       </div>
       <div class="setting" id="set-credits" class:flash={flash === 'set-credits'}>
         <div class="text">
@@ -599,6 +693,19 @@
   .setting .text {
     min-width: 0;
     max-width: 52ch;
+  }
+  .notes {
+    padding: var(--s-3) var(--s-4);
+    margin: var(--s-3) 0;
+    border-radius: var(--r-2);
+    background: var(--hover);
+    white-space: pre-line;
+  }
+  .notes p {
+    margin: 0 0 var(--s-1);
+  }
+  .error-text {
+    color: var(--red);
   }
   .setting p {
     margin: 0;

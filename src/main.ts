@@ -1,7 +1,14 @@
 import { mount } from 'svelte';
-import App from './App.svelte';
 import './app.css';
-// Timing tokens on <html> before the first paint.
-import './lib/motion.svelte';
+import { restoreSettings } from './lib/settings-sync';
 
-export default mount(App, { target: document.getElementById('app')! });
+// Saved settings go back into storage before any module reads them, so the
+// app is imported only after. Motion first: its timing tokens are set on
+// <html> before the first paint.
+const app = restoreSettings().then(async () => {
+  await import('./lib/motion.svelte');
+  const { default: App } = await import('./App.svelte');
+  return mount(App, { target: document.getElementById('app')! });
+});
+
+export default app;
