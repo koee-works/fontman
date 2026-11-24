@@ -11,7 +11,8 @@
     "test:viewer": "esbuild scripts/check-viewer-export.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-viewer-export.mjs && node node_modules/.cache/check-viewer-export.mjs",
     "test:palette": "esbuild scripts/check-palette.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-palette.mjs && node node_modules/.cache/check-palette.mjs",
     "test:themes": "esbuild scripts/check-themes.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-themes.mjs && node node_modules/.cache/check-themes.mjs",
-    "test:features": "esbuild scripts/check-features.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-features.mjs && node node_modules/.cache/check-features.mjs"
+    "test:features": "esbuild scripts/check-features.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-features.mjs && node node_modules/.cache/check-features.mjs",
+    "test:query": "esbuild scripts/check-query.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-query.mjs && node node_modules/.cache/check-query.mjs"
   },
   "dependencies": {
     "@internationalized/date": "^3.12.4",

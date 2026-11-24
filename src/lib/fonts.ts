@@ -24,6 +24,12 @@ export const GOOGLE_PREFIX = 'gf:';
 
 export const googlePreviewId = (family: string) => GOOGLE_PREFIX + family;
 
+/** Prefix for a Google family's regular style in full: `gff:<family name>`.
+ *  Name-only previews can't show other text, so typed samples use these. */
+export const GOOGLE_FULL_PREFIX = 'gff:';
+
+export const googleFullId = (family: string) => GOOGLE_FULL_PREFIX + family;
+
 /** Short stable hash, so a family name becomes a safe CSS identifier. */
 function hash(s: string): string {
   let h = 0x811c9dc5;
@@ -33,7 +39,7 @@ function hash(s: string): string {
 
 /** Must match `FaceRecord::css_family` in font-core for library faces. */
 export function cssFamily(faceId: string): string {
-  if (faceId.startsWith(GOOGLE_PREFIX)) return `pf-gf-${hash(faceId)}`;
+  if (faceId.startsWith(GOOGLE_PREFIX) || faceId.startsWith(GOOGLE_FULL_PREFIX)) return `pf-gf-${hash(faceId)}`;
   return `pf-${faceId.slice(0, 16)}`;
 }
 
@@ -45,6 +51,9 @@ export function cssFamily(faceId: string): string {
 export function fontUrl(faceId: string): string {
   if (faceId.startsWith(GOOGLE_PREFIX)) {
     return convertFileSrc(`gf/${faceId.slice(GOOGLE_PREFIX.length)}`, 'font');
+  }
+  if (faceId.startsWith(GOOGLE_FULL_PREFIX)) {
+    return convertFileSrc(`gf-full/${faceId.slice(GOOGLE_FULL_PREFIX.length)}`, 'font');
   }
   return convertFileSrc(faceId, 'font');
 }

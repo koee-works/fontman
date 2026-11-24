@@ -176,6 +176,15 @@ which has a proper tooltip.
 
 ## Patterns
 
+- **Filters are chips in one row**, each with its own icon so they're told
+  apart at a glance: `filter` leads the row, `sort` marks the order, and each
+  chip shows what it filters by (`weight` is a B, `width` a horizontal arrow,
+  `styles` layers, `scripts` a language glyph, `category` a T, `traits`
+  shapes, `format` a file type, Axes reuse `variable`, Status reuses `active`).
+  Unset, a chip is an outline; set, it fills with the accent tint, says its
+  value and gains a ×. Every choice in a filter panel shows its count with the
+  other filters applied.
+
 - **Destructive actions** confirm first and say what survives: removing a folder
   keeps the files on disk; removing the API key keeps downloaded fonts.
 - **Feedback** names the result: "Rescanned big: 10,220 files read",

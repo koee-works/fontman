@@ -49,7 +49,9 @@ impl AppState {
     }
 
     fn is_installed(&self, face: &FaceRecord) -> bool {
-        self.installed_roots.iter().any(|r| face.file_path.starts_with(r))
+        self.installed_roots
+            .iter()
+            .any(|r| face.file_path.starts_with(r))
     }
 }
 
@@ -117,6 +119,12 @@ struct FaceSummary {
     /// so a variable face whose default is Thin previews as Regular — an
     /// instance its own name table does not describe.
     variation: Option<String>,
+    /// File modification time (Unix seconds), for "recently added" sorting.
+    modified: i64,
+    /// Variation axis tags, such as `wght` and `opsz`.
+    axes: Vec<String>,
+    /// The `wght` axis range of a variable face, for weight filtering.
+    weight_range: Option<[f32; 2]>,
 }
 
 fn default_variation(face: &FaceRecord) -> Option<String> {
@@ -189,7 +197,7 @@ struct ScanFailure {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct ToggleResult {
+pub(crate) struct ToggleResult {
     id: String,
     ok: bool,
     error: Option<String>,
@@ -253,7 +261,11 @@ async fn library_status(app: AppHandle) -> CmdResult<LibraryStatus> {
 /// looks wrong); a whole-library scan only reads files whose size or mtime
 /// changed unless `full` is set.
 #[tauri::command]
-async fn scan_library(app: AppHandle, full: bool, folder: Option<String>) -> CmdResult<ScanSummary> {
+async fn scan_library(
+    app: AppHandle,
+    full: bool,
+    folder: Option<String>,
+) -> CmdResult<ScanSummary> {
     let emitter = app.clone();
     blocking(app, move |st| {
         let summary = run_scan(st, &emitter, full, folder.map(PathBuf::from))?;
@@ -281,7 +293,11 @@ pub(crate) fn run_scan(
     if let Some(dir) = &scope {
         let roots = st.index().roots()?;
         if !roots.iter().any(|r| dir.starts_with(r)) {
-            return Err(format!("{} is not in your library. Add it as a folder first.", dir.display()).into());
+            return Err(format!(
+                "{} is not in your library. Add it as a folder first.",
+                dir.display()
+            )
+            .into());
         }
         if !dir.is_dir() {
             return Err(format!("Can't find the folder {}.", dir.display()).into());
@@ -304,8 +320,15 @@ pub(crate) fn run_scan(
     let (targets, known) = {
         let idx = st.index();
         let reread_everything = full || scope.is_some();
-        let known = if reread_everything { Default::default() } else { idx.known_stats()? };
-        (scope.clone().map(|d| vec![d]).unwrap_or(idx.roots()?), known)
+        let known = if reread_everything {
+            Default::default()
+        } else {
+            idx.known_stats()?
+        };
+        (
+            scope.clone().map(|d| vec![d]).unwrap_or(idx.roots()?),
+            known,
+        )
     };
 
     // Progress arrives from worker threads per file; forward at most ten
@@ -336,7 +359,10 @@ pub(crate) fn run_scan(
         failures: report
             .failures
             .into_iter()
-            .map(|(p, e)| ScanFailure { path: p.to_string_lossy().into_owned(), error: e })
+            .map(|(p, e)| ScanFailure {
+                path: p.to_string_lossy().into_owned(),
+                error: e,
+            })
             .collect(),
     })
 }
@@ -389,22 +415,30 @@ async fn list_families(app: AppHandle) -> CmdResult<Vec<FamilySummary>> {
             let idx = st.index();
             (idx.all_faces()?, idx.active_face_ids()?)
         };
-        let installed: HashSet<String> =
-            faces.iter().filter(|f| st.is_installed(f)).map(|f| f.face_id.clone()).collect();
+        let installed: HashSet<String> = faces
+            .iter()
+            .filter(|f| st.is_installed(f))
+            .map(|f| f.face_id.clone())
+            .collect();
 
         Ok(family::group(faces, &active)
             .into_iter()
             .map(|fam| {
-                let representative =
-                    fam.representative().map(|f| f.face_id.clone()).unwrap_or_default();
+                let representative = fam
+                    .representative()
+                    .map(|f| f.face_id.clone())
+                    .unwrap_or_default();
                 let all_installed = fam.faces.iter().all(|f| installed.contains(&f.face_id));
                 FamilySummary {
                     name: fam.name,
                     // The checkbox governs library faces only; installed faces
                     // are always on and don't count toward "partial".
                     activation: {
-                        let lib: Vec<&FaceRecord> =
-                            fam.faces.iter().filter(|f| !installed.contains(&f.face_id)).collect();
+                        let lib: Vec<&FaceRecord> = fam
+                            .faces
+                            .iter()
+                            .filter(|f| !installed.contains(&f.face_id))
+                            .collect();
                         let on = lib.iter().filter(|f| active.contains(&f.face_id)).count();
                         match (lib.len(), on) {
                             (0, _) => FamilyActivation::All,
@@ -423,6 +457,13 @@ async fn list_families(app: AppHandle) -> CmdResult<Vec<FamilySummary>> {
                         .map(|f| FaceSummary {
                             variation: default_variation(&f),
                             bytes: f.file_size,
+                            modified: f.modified,
+                            axes: f.axes.iter().map(|a| a.tag.clone()).collect(),
+                            weight_range: f
+                                .axes
+                                .iter()
+                                .find(|a| a.tag == "wght")
+                                .map(|a| [a.min, a.max]),
                             active: active.contains(&f.face_id),
                             installed: installed.contains(&f.face_id),
                             id: f.face_id,
@@ -461,7 +502,10 @@ async fn face_detail(app: AppHandle, id: String) -> CmdResult<FaceDetail> {
 #[tauri::command]
 async fn face_coverage(app: AppHandle, id: String) -> CmdResult<Vec<[u32; 2]>> {
     blocking(app, move |st| {
-        let face = st.index().face(&id)?.ok_or_else(|| format!("unknown face {id}"))?;
+        let face = st
+            .index()
+            .face(&id)?
+            .ok_or_else(|| format!("unknown face {id}"))?;
         font_core::coverage(&face).map_err(|e| e.to_string().into())
     })
     .await
@@ -470,29 +514,53 @@ async fn face_coverage(app: AppHandle, id: String) -> CmdResult<Vec<[u32; 2]>> {
 #[tauri::command]
 async fn face_features(app: AppHandle, id: String) -> CmdResult<Vec<font_core::FontFeature>> {
     blocking(app, move |st| {
-        let face = st.index().face(&id)?.ok_or_else(|| format!("unknown face {id}"))?;
+        let face = st
+            .index()
+            .face(&id)?
+            .ok_or_else(|| format!("unknown face {id}"))?;
         font_core::features(&face).map_err(|e| e.to_string().into())
     })
     .await
 }
 
 #[tauri::command]
-async fn glyph_outlines(app: AppHandle, id: String, text: String) -> CmdResult<font_core::Outlines> {
+async fn glyph_outlines(
+    app: AppHandle,
+    id: String,
+    text: String,
+) -> CmdResult<font_core::Outlines> {
     blocking(app, move |st| {
-        let face = st.index().face(&id)?.ok_or_else(|| format!("unknown face {id}"))?;
+        let face = st
+            .index()
+            .face(&id)?
+            .ok_or_else(|| format!("unknown face {id}"))?;
         font_core::outlines(&face, &text).map_err(|e| e.to_string().into())
     })
     .await
 }
 
 #[tauri::command]
-async fn set_faces_active(app: AppHandle, ids: Vec<String>, active: bool) -> CmdResult<Vec<ToggleResult>> {
-    blocking(app, move |st| {
+async fn set_faces_active(
+    app: AppHandle,
+    ids: Vec<String>,
+    active: bool,
+) -> CmdResult<Vec<ToggleResult>> {
+    blocking(app, move |st| set_active(st, &ids, active)).await
+}
+
+/// Activate or deactivate library faces, recording each in the ledger.
+/// Shared by the toggle command and Google's download-and-activate.
+pub(crate) fn set_active(
+    st: &AppState,
+    ids: &[String],
+    active: bool,
+) -> CmdResult<Vec<ToggleResult>> {
+    {
         let mut results = Vec::with_capacity(ids.len());
         let (faces, ledger) = {
             let idx = st.index();
             let mut faces = Vec::new();
-            for id in &ids {
+            for id in ids {
                 match idx.face(id)? {
                     Some(f) if st.is_installed(&f) => results.push(ToggleResult {
                         id: id.clone(),
@@ -515,17 +583,31 @@ async fn set_faces_active(app: AppHandle, ids: Vec<String>, active: bool) -> Cmd
 
         if active {
             // Already-active faces are a no-op, not an error.
-            let todo: Vec<FaceRecord> =
-                faces.into_iter().filter(|f| !ledger.contains_key(f.face_id.as_str())).collect();
+            let todo: Vec<FaceRecord> = faces
+                .into_iter()
+                .filter(|f| !ledger.contains_key(f.face_id.as_str()))
+                .collect();
             let outcomes = st.activation.activate_many(&todo);
             let idx = st.index();
             for (id, outcome) in outcomes {
                 results.push(match outcome {
                     Ok(h) => match idx.record_activation(&id, &h.registered_path, h.materialized) {
-                        Ok(()) => ToggleResult { id, ok: true, error: None },
-                        Err(e) => ToggleResult { id, ok: false, error: Some(e.to_string()) },
+                        Ok(()) => ToggleResult {
+                            id,
+                            ok: true,
+                            error: None,
+                        },
+                        Err(e) => ToggleResult {
+                            id,
+                            ok: false,
+                            error: Some(e.to_string()),
+                        },
                     },
-                    Err(e) => ToggleResult { id, ok: false, error: Some(e.to_string()) },
+                    Err(e) => ToggleResult {
+                        id,
+                        ok: false,
+                        error: Some(e.to_string()),
+                    },
                 });
             }
         } else {
@@ -538,16 +620,27 @@ async fn set_faces_active(app: AppHandle, ids: Vec<String>, active: bool) -> Cmd
             for (id, outcome) in outcomes {
                 results.push(match outcome {
                     Ok(()) => match idx.clear_activation(&id) {
-                        Ok(()) => ToggleResult { id, ok: true, error: None },
-                        Err(e) => ToggleResult { id, ok: false, error: Some(e.to_string()) },
+                        Ok(()) => ToggleResult {
+                            id,
+                            ok: true,
+                            error: None,
+                        },
+                        Err(e) => ToggleResult {
+                            id,
+                            ok: false,
+                            error: Some(e.to_string()),
+                        },
                     },
-                    Err(e) => ToggleResult { id, ok: false, error: Some(e.to_string()) },
+                    Err(e) => ToggleResult {
+                        id,
+                        ok: false,
+                        error: Some(e.to_string()),
+                    },
                 });
             }
         }
         Ok(results)
-    })
-    .await
+    }
 }
 
 #[tauri::command]
@@ -564,7 +657,10 @@ async fn conflicts(app: AppHandle) -> CmdResult<ConflictReport> {
             .filter(|f| active_ids.contains(&f.face_id) || st.is_installed(f))
             .cloned()
             .collect();
-        Ok(ConflictReport { active: family::conflicts(&live), library: family::conflicts(&all) })
+        Ok(ConflictReport {
+            active: family::conflicts(&live),
+            library: family::conflicts(&all),
+        })
     })
     .await
 }
@@ -648,7 +744,9 @@ fn reconcile(st: &AppState) {
         let outcome = face.as_ref().map(|f| st.activation.activate(f));
         match outcome {
             Some(Ok(h)) => {
-                let _ = st.index().record_activation(&h.face_id, &h.registered_path, h.materialized);
+                let _ =
+                    st.index()
+                        .record_activation(&h.face_id, &h.registered_path, h.materialized);
             }
             // The font is gone or unusable; keeping the row would lie.
             _ => {
@@ -657,7 +755,11 @@ fn reconcile(st: &AppState) {
         }
     }
     if !rec.orphaned.is_empty() || !rec.missing.is_empty() {
-        tracing::info!(orphaned = rec.orphaned.len(), missing = rec.missing.len(), "reconciled");
+        tracing::info!(
+            orphaned = rec.orphaned.len(),
+            missing = rec.missing.len(),
+            "reconciled"
+        );
     }
 
     // Everything in the cache that an active face doesn't need can go.
@@ -708,7 +810,8 @@ pub fn run() {
         .register_asynchronous_uri_scheme_protocol("font", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             // font://localhost/<id> on macOS/Linux, http://font.localhost/<id> on
-            // Windows. Google previews are font://localhost/gf/<family>, with the
+            // Windows. Google previews are font://localhost/gf/<family> (name only) or
+            // gf-full/<family> (the regular style in full), with the
             // path percent-encoded by the frontend.
             let path = percent_encoding::percent_decode_str(request.uri().path())
                 .decode_utf8_lossy()
@@ -716,9 +819,12 @@ pub fn run() {
                 .to_string();
             tauri::async_runtime::spawn_blocking(move || {
                 let st = app.state::<AppState>();
-                let response = match path.strip_prefix("gf/") {
-                    Some(family) => google_cmds::serve_preview(&st, family),
-                    None => serve_face(&st, &path),
+                let response = if let Some(family) = path.strip_prefix("gf-full/") {
+                    google_cmds::serve_preview(&st, family, true)
+                } else if let Some(family) = path.strip_prefix("gf/") {
+                    google_cmds::serve_preview(&st, family, false)
+                } else {
+                    serve_face(&st, &path)
                 };
                 responder.respond(response);
             });
@@ -794,7 +900,10 @@ mod tests {
             "format": "truetype", "unitsPerEm": 1000, "glyphCount": 1, "codepointCount": 1
         }))
         .unwrap();
-        assert_eq!(default_variation(&face).as_deref(), Some(r#""wght" 100, "opsz" 14"#));
+        assert_eq!(
+            default_variation(&face).as_deref(),
+            Some(r#""wght" 100, "opsz" 14"#)
+        );
         face.axes.clear();
         assert_eq!(default_variation(&face), None);
     }

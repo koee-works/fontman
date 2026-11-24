@@ -54,6 +54,19 @@
   import SearchField from './lib/ui/SearchField.svelte';
   import Slider from './lib/ui/Slider.svelte';
   import NumberField from './lib/ui/NumberField.svelte';
+  import FilterBar from './lib/filters/FilterBar.svelte';
+  import { libraryFacets, librarySorts } from './lib/facets';
+  import { QueryState } from './lib/query-state.svelte';
+  import {
+    applyFacets,
+    closeMatches,
+    isEmptyQuery,
+    matchQuery,
+    parseQuery,
+    relevance,
+    sortItems,
+    type ParsedQuery,
+  } from './lib/query';
 
   type Filter = 'all' | 'library' | 'active' | 'variable' | 'conflicts' | 'installed' | 'collection' | 'tag';
   type View = 'library' | 'google' | 'viewer' | 'duplicates' | 'compare';
@@ -391,7 +404,7 @@
    * A collection holds styles, not families: each family is narrowed to its
    * member styles, so its toggle and specimen act on those alone.
    */
-  function inCollection(c: Collection | undefined, q: string): FamilySummary[] {
+  function inCollection(c: Collection | undefined, q: ParsedQuery): FamilySummary[] {
     if (!c) return [];
     const members = new Set(c.faceIds);
     const out: FamilySummary[] = [];
@@ -415,15 +428,38 @@
     return out;
   }
 
-  /** Search matches a family's name or any of its tags. */
-  function matches(f: FamilySummary, q: string): boolean {
-    if (!q) return true;
-    if (f.name.toLowerCase().includes(q)) return true;
-    return tagsOf(f.name).some((t) => t.toLowerCase().includes(q));
+  /** Search matches a family's name, its styles' names, or its tags. */
+  function matches(f: FamilySummary, q: ParsedQuery): boolean {
+    if (isEmptyQuery(q)) return true;
+    return matchQuery(q, [f.name, ...tagsOf(f.name), ...f.faces.map((x) => x.subfamily)]);
   }
 
+  // Search, then the sidebar's scope, then the filter bar, then the order.
+  const parsed = $derived(parseQuery(query));
+  const searching = $derived(!isEmptyQuery(parsed) && parsed.include.length > 0);
+  const libQuery = new QueryState('library-query', { key: 'name', dir: 'asc' });
+  const libFacets = $derived(libraryFacets(tagsOf));
+  const libSorts = librarySorts((f) => relevance(parsed, f.name));
+  const libSort = $derived(libQuery.effective(searching));
+  $effect(() => {
+    if (!searching) libQuery.endSearch();
+  });
+
+  /** In the sidebar's scope, before search. */
+  const scoped = $derived(scope(parseQuery('')));
+  /** In scope and matching the search: what the filter bar counts. */
+  const searched = $derived(scope(parsed));
+  /** Nothing matched exactly: names close to what was typed, typos included. */
+  const close = $derived(
+    searching && searched.length === 0 ? closeMatches(scoped, parsed, (f) => f.name) : [],
+  );
   const shown = $derived.by(() => {
-    const q = query.trim().toLowerCase();
+    if (close.length) return close;
+    const out = applyFacets(searched, libFacets, libQuery.filters);
+    return sortItems(out, libSorts, libSort, (f) => f.name);
+  });
+
+  function scope(q: ParsedQuery): FamilySummary[] {
     if (filter === 'collection') return inCollection(currentCollection, q);
     const tagged = currentTag ? new Set(currentTag.families) : null;
     return families.filter((f) => {
@@ -445,7 +481,7 @@
           return true;
       }
     });
-  });
+  }
 
   const libraryRoots = $derived(status?.roots.filter((r) => !r.installed) ?? []);
   const systemRoots = $derived(status?.roots.filter((r) => r.installed && r.exists) ?? []);
@@ -1499,6 +1535,13 @@
         keySaved={googleKeySaved}
         onOpenSettings={() => (settingsOpen = true)}
         onDownloaded={refresh}
+        library={families}
+        {busy}
+        onToggleFamily={toggleFamily}
+        bind:sample
+        bind:size
+        {layout}
+        onLayout={setLayout}
       />
     {:else}
       <div class="tester">
@@ -1526,6 +1569,27 @@
           <NumberField bind:value={size} min={12} max={120} unit="px" label="Preview size" />
         </div>
       </div>
+
+      <FilterBar
+        items={searched}
+        facets={libFacets}
+        query={libQuery}
+        sorts={libSorts}
+        sort={libSort}
+        onSort={(x) => libQuery.pick(x, searching)}
+        {searching}
+        shown={shown.length}
+        noun={['family', 'families']}
+      />
+
+      {#if close.length}
+        <Callout>
+          No family matches “{query.trim()}”. Showing names close to it.
+          {#snippet action()}
+            <Button size="sm" variant="ghost" onclick={() => (query = '')}>Clear search</Button>
+          {/snippet}
+        </Callout>
+      {/if}
 
       {#if notice}
         <Callout tone={notice.tone} onDismiss={() => (notice = null)}>{notice.text}</Callout>
@@ -1660,7 +1724,7 @@
                 items={shown}
                 key={(f) => f.name}
                 estimate={estimateRow}
-                resetScroll={`${filter}|${query}|list`}
+                resetScroll={`${filter}|${query}|list|${JSON.stringify(libQuery.filters)}|${libSort.key}${libSort.dir}`}
                 resetMeasure={size}
                 label="Font families"
               >
@@ -1690,7 +1754,7 @@
                 items={gridRows}
                 key={(r) => `${columns}:${r.key}`}
                 estimate={estimateGridRow}
-                resetScroll={`${filter}|${query}|grid`}
+                resetScroll={`${filter}|${query}|grid|${JSON.stringify(libQuery.filters)}|${libSort.key}${libSort.dir}`}
                 resetMeasure={`${size}|${columns}`}
                 label="Font families"
               >
@@ -1745,6 +1809,13 @@
               or add a single style from the inspector.
             </p>
             <Button variant="ghost" onclick={() => (filter = 'all')}>Browse all fonts</Button>
+          {:else if searched.length && !shown.length}
+            <p>
+              {searched.length.toLocaleString()}
+              {searched.length === 1 ? 'family is' : 'families are'} here, but the filters hide
+              {searched.length === 1 ? 'it' : 'all of them'}.
+            </p>
+            <Button variant="ghost" onclick={() => libQuery.clear()}>Clear filters</Button>
           {:else if query}
             <p>No family matches “{query}”.</p>
             <Button variant="ghost" onclick={() => (query = '')}>Clear search</Button>

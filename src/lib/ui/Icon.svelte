@@ -30,6 +30,17 @@
   import ExternalLink from '@lucide/svelte/icons/external-link';
   import Eye from '@lucide/svelte/icons/eye';
   import EyeOff from '@lucide/svelte/icons/eye-off';
+  import ArrowUpDown from '@lucide/svelte/icons/arrow-up-down';
+  import ArrowUpNarrowWide from '@lucide/svelte/icons/arrow-up-narrow-wide';
+  import ArrowDownWideNarrow from '@lucide/svelte/icons/arrow-down-wide-narrow';
+  import ListFilter from '@lucide/svelte/icons/list-filter';
+  import LetterB from '@lucide/svelte/icons/letter-b';
+  import MoveHorizontal from '@lucide/svelte/icons/move-horizontal';
+  import Layers from '@lucide/svelte/icons/layers';
+  import FileType from '@lucide/svelte/icons/file-type';
+  import Type from '@lucide/svelte/icons/type';
+  import Shapes from '@lucide/svelte/icons/shapes';
+  import Languages from '@lucide/svelte/icons/languages';
   import FileBraces from '@lucide/svelte/icons/file-braces';
   import FileCode from '@lucide/svelte/icons/file-code';
   import FileInput from '@lucide/svelte/icons/file-input';
@@ -87,6 +98,18 @@
     external: { c: ExternalLink },
     eye: { c: Eye },
     'eye-off': { c: EyeOff },
+    sort: { c: ArrowUpDown },
+    'sort-asc': { c: ArrowUpNarrowWide },
+    'sort-desc': { c: ArrowDownWideNarrow },
+    filter: { c: ListFilter },
+    // Filter chips: what each one filters by.
+    weight: { c: LetterB },
+    width: { c: MoveHorizontal },
+    styles: { c: Layers },
+    format: { c: FileType },
+    category: { c: Type },
+    traits: { c: Shapes },
+    scripts: { c: Languages },
     // Messages
     info: { c: Info },
     warning: { c: TriangleAlert },

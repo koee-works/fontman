@@ -22,6 +22,12 @@ export interface FaceSummary {
   bytes: number;
   /** Pins every axis to its default; null for static faces. */
   variation: string | null;
+  /** File modification time, Unix seconds. */
+  modified: number;
+  /** Variation axis tags, such as "wght". */
+  axes: string[];
+  /** The wght axis range of a variable face. */
+  weightRange: [number, number] | null;
 }
 
 export interface FamilySummary {
@@ -194,9 +200,20 @@ export interface GoogleFamilySummary {
   variable: boolean;
   axes: string[];
   scripts: number;
+  /** Google's subset names, such as "latin" or "cyrillic-ext". */
+  subsets: string[];
+  italic: boolean;
+  /** Lightest and heaviest weight available. */
+  weightRange: [number, number];
+  /** Google's tag paths, such as "/Sans/Humanist". */
+  tags: string[];
+  /** Position in Google's popularity order, from 0. */
+  rank: number;
   version: string;
   lastModified: string;
   status: GoogleStatus;
+  /** The library family it was indexed as, once downloaded. */
+  library: string | null;
 }
 
 export interface CatalogView {
@@ -310,8 +327,8 @@ export const api = {
   saveGoogleKey: (key: string) => invoke<SaveKeyResult>('save_google_key', { key }),
   removeGoogleKey: () => invoke<GoogleSettings>('remove_google_key'),
   googleCatalog: (refresh = false) => invoke<CatalogView>('google_catalog', { refresh }),
-  googleDownload: (families: string[]) =>
-    invoke<DownloadResult[]>('google_download', { families }),
+  googleDownload: (families: string[], activate = false) =>
+    invoke<DownloadResult[]>('google_download', { families, activate }),
 
   listCollections: () => invoke<Collection[]>('list_collections'),
   createCollection: (name: string, faceIds: string[] = []) =>

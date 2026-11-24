@@ -46,7 +46,11 @@ pub struct TagSettings {
 
 impl Default for TagSettings {
     fn default() -> Self {
-        Self { enabled: false, min_weight: 50.0, imported_at: None }
+        Self {
+            enabled: false,
+            min_weight: 50.0,
+            imported_at: None,
+        }
     }
 }
 
@@ -111,7 +115,10 @@ fn endpoint() -> Endpoint {
             .filter(|h| !h.is_empty())
             .map(str::to_string)
             .collect();
-        return Endpoint { api_url, font_hosts };
+        return Endpoint {
+            api_url,
+            font_hosts,
+        };
     }
     Endpoint::default()
 }
@@ -178,13 +185,17 @@ pub async fn save_google_key(app: AppHandle, key: String) -> CmdResult<SaveKeyRe
             return Err("Paste a key first.".to_string().into());
         }
         if key.chars().any(char::is_whitespace) {
-            return Err("That doesn't look like a single key; it contains spaces.".to_string().into());
+            return Err("That doesn't look like a single key; it contains spaces."
+                .to_string()
+                .into());
         }
         let (verified, warning) = match google::check_key(&st.google.endpoint, &key) {
             Ok(()) => (true, None),
             Err(GoogleError::Network(e)) => (
                 false,
-                Some(format!("Saved, but Google couldn't be reached to check the key ({e}).")),
+                Some(format!(
+                    "Saved, but Google couldn't be reached to check the key ({e})."
+                )),
             ),
             Err(e) => return Err(e.to_string().into()),
         };
@@ -192,7 +203,11 @@ pub async fn save_google_key(app: AppHandle, key: String) -> CmdResult<SaveKeyRe
             .secrets
             .set(&key)
             .map_err(|e| format!("Couldn't save the key: {e}"))?;
-        Ok(SaveKeyResult { settings: settings(st), verified, warning })
+        Ok(SaveKeyResult {
+            settings: settings(st),
+            verified,
+            warning,
+        })
     })
     .await
 }
@@ -219,10 +234,24 @@ pub struct GoogleFamilySummary {
     variable: bool,
     axes: Vec<String>,
     scripts: usize,
+    /// Google's subset names, such as "latin" or "cyrillic-ext".
+    subsets: Vec<String>,
+    /// Has at least one italic style.
+    italic: bool,
+    /// Lightest and heaviest weight, from the `wght` axis or the styles.
+    weight_range: [f32; 2],
+    /// Google's tag paths, such as "/Sans/Humanist", at or above the tag
+    /// strength set in Settings.
+    tags: Vec<String>,
+    /// Position in Google's popularity order, from 0.
+    rank: usize,
     version: String,
     last_modified: String,
     /// "available", "downloaded", or "update" (a newer version exists).
     status: &'static str,
+    /// The library family the downloaded files were indexed as. Usually the
+    /// same name, but read from the index so a renamed family still matches.
+    library: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -249,14 +278,63 @@ fn downloaded(root: &Path) -> HashMap<String, String> {
         .collect()
 }
 
+/// Library family names by download folder name, for downloaded families.
+fn library_names(st: &AppState) -> HashMap<String, String> {
+    let root = &st.google.root;
+    let Ok(faces) = st.index().all_faces() else {
+        return HashMap::new();
+    };
+    let mut out = HashMap::new();
+    for f in faces {
+        let Ok(rel) = f.file_path.strip_prefix(root) else {
+            continue;
+        };
+        let Some(dir) = rel.components().next() else {
+            continue;
+        };
+        out.entry(dir.as_os_str().to_string_lossy().into_owned())
+            .or_insert(f.family);
+    }
+    out
+}
+
+/// A family's weight span. Variants are named like "regular", "700" or
+/// "300italic"; a `wght` axis widens the span to its full range.
+fn weight_range(f: &GoogleFamily) -> [f32; 2] {
+    if let Some(a) = f.axes.iter().find(|a| a.tag == "wght") {
+        return [a.start, a.end];
+    }
+    let weights: Vec<f32> = f
+        .variants
+        .iter()
+        .map(|v| {
+            let digits: String = v.chars().take_while(|c| c.is_ascii_digit()).collect();
+            digits.parse().unwrap_or(400.0)
+        })
+        .collect();
+    let min = weights.iter().copied().fold(f32::INFINITY, f32::min);
+    let max = weights.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+    if min.is_finite() {
+        [min, max]
+    } else {
+        [400.0, 400.0]
+    }
+}
+
 fn summarize(st: &AppState, cat: &CachedCatalog, stale: Option<String>) -> CatalogView {
     let on_disk = downloaded(&st.google.root);
+    let names = library_names(st);
+    let min_weight = st.google.tag_settings().min_weight;
     let families = cat
         .families
         .iter()
-        .map(|f| {
+        .enumerate()
+        .map(|(rank, f)| {
             let dir = google::family_dir(&st.google.root, &f.family);
-            let key = dir.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            let key = dir
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
             let status = match on_disk.get(&key) {
                 None => "available",
                 Some(v) if *v == f.version => "downloaded",
@@ -269,13 +347,32 @@ fn summarize(st: &AppState, cat: &CachedCatalog, stale: Option<String>) -> Catal
                 variable: !f.axes.is_empty(),
                 axes: f.axes.iter().map(|a| a.tag.clone()).collect(),
                 scripts: f.subsets.len(),
+                subsets: f.subsets.clone(),
+                italic: f.variants.iter().any(|v| v.contains("italic")),
+                weight_range: weight_range(f),
+                tags: f
+                    .tags
+                    .iter()
+                    .filter(|t| t.weight >= min_weight)
+                    .map(|t| t.name.clone())
+                    .collect(),
+                rank,
                 version: f.version.clone(),
                 last_modified: f.last_modified.clone(),
                 status,
+                library: if status == "available" {
+                    None
+                } else {
+                    names.get(&key).cloned()
+                },
             }
         })
         .collect();
-    CatalogView { families, fetched_at: cat.fetched_at, stale }
+    CatalogView {
+        families,
+        fetched_at: cat.fetched_at,
+        stale,
+    }
 }
 
 #[tauri::command]
@@ -283,25 +380,36 @@ pub async fn google_catalog(app: AppHandle, refresh: bool) -> CmdResult<CatalogV
     blocking(app, move |st| {
         let g = &st.google;
         let cached = g.cached();
-        let fresh = cached.as_ref().is_some_and(|c| now() - c.fetched_at < CATALOG_MAX_AGE_SECS);
+        let fresh = cached
+            .as_ref()
+            .is_some_and(|c| now() - c.fetched_at < CATALOG_MAX_AGE_SECS);
         if fresh && !refresh {
             return Ok(summarize(st, cached.as_ref().unwrap(), None));
         }
 
         let Some((key, _)) = g.secrets.get() else {
-            return Err("Add a Google Fonts API key in Settings first.".to_string().into());
+            return Err("Add a Google Fonts API key in Settings first."
+                .to_string()
+                .into());
         };
         match google::fetch_catalog(&g.endpoint, &key) {
             Ok(families) => {
-                let cat = g.store(CachedCatalog { fetched_at: now(), families });
+                let cat = g.store(CachedCatalog {
+                    fetched_at: now(),
+                    families,
+                });
                 // Google's tags change with the catalog.
                 reapply_tags(st);
                 Ok(summarize(st, &cat, None))
             }
             // Offline with a cached copy: show it, and say it may be out of date.
-            Err(GoogleError::Network(e)) if cached.is_some() => {
-                Ok(summarize(st, cached.as_ref().unwrap(), Some(format!("Couldn't reach Google ({e}). Showing the list from the last update."))))
-            }
+            Err(GoogleError::Network(e)) if cached.is_some() => Ok(summarize(
+                st,
+                cached.as_ref().unwrap(),
+                Some(format!(
+                    "Couldn't reach Google ({e}). Showing the list from the last update."
+                )),
+            )),
             Err(e) => Err(e.to_string().into()),
         }
     })
@@ -394,7 +502,9 @@ pub async fn remove_google_tags(app: AppHandle) -> CmdResult<GoogleTagStatus> {
         let mut t = st.google.tag_settings();
         t.enabled = false;
         t.imported_at = None;
-        st.google.save_tag_settings(&t).map_err(|e| format!("Couldn't save the setting: {e}"))?;
+        st.google
+            .save_tag_settings(&t)
+            .map_err(|e| format!("Couldn't save the setting: {e}"))?;
         tag_status(st)
     })
     .await
@@ -424,12 +534,19 @@ struct DownloadProgress {
 /// The folder is an ordinary library folder, so downloaded fonts are toggled,
 /// grouped and rescanned like any others.
 #[tauri::command]
-pub async fn google_download(app: AppHandle, families: Vec<String>) -> CmdResult<Vec<DownloadResult>> {
+pub async fn google_download(
+    app: AppHandle,
+    families: Vec<String>,
+    activate: Option<bool>,
+) -> CmdResult<Vec<DownloadResult>> {
+    let activate = activate.unwrap_or(false);
     let emitter = app.clone();
     blocking(app, move |st| {
         let g = &st.google;
         let Some(cat) = g.cached() else {
-            return Err("The Google Fonts list hasn't been loaded yet.".to_string().into());
+            return Err("The Google Fonts list hasn't been loaded yet."
+                .to_string()
+                .into());
         };
         std::fs::create_dir_all(&g.root).map_err(|e| e.to_string())?;
         st.index().add_root(&g.root)?;
@@ -437,28 +554,67 @@ pub async fn google_download(app: AppHandle, families: Vec<String>) -> CmdResult
         let total = families.len();
         let mut results = Vec::with_capacity(total);
         for (i, name) in families.into_iter().enumerate() {
-            let _ = emitter.emit("google-download", DownloadProgress { family: name.clone(), done: i, total });
+            let _ = emitter.emit(
+                "google-download",
+                DownloadProgress {
+                    family: name.clone(),
+                    done: i,
+                    total,
+                },
+            );
             let outcome = cat
                 .families
                 .iter()
                 .find(|f| f.family == name)
                 .ok_or_else(|| format!("{name} isn't in the Google Fonts list"))
-                .and_then(|fam| google::install_family(&g.endpoint, &g.root, fam).map_err(|e| e.to_string()))
+                .and_then(|fam| {
+                    google::install_family(&g.endpoint, &g.root, fam).map_err(|e| e.to_string())
+                })
                 .and_then(|dir| {
                     // Index just this family's folder. remove_missing cleans up
                     // files an update renamed or dropped.
-                    let report = font_core::scan::scan(std::slice::from_ref(&dir), &Default::default());
+                    let report =
+                        font_core::scan::scan(std::slice::from_ref(&dir), &Default::default());
                     let mut idx = st.index();
                     idx.upsert_faces(&report.faces).map_err(|e| e.to_string())?;
                     idx.remove_missing(Some(&dir)).map_err(|e| e.to_string())?;
+                    drop(idx);
+                    if activate {
+                        let ids: Vec<String> =
+                            report.faces.iter().map(|f| f.face_id.clone()).collect();
+                        let results =
+                            crate::set_active(st, &ids, true).map_err(|e| e.to_string())?;
+                        let failed = results.iter().filter(|r| !r.ok).count();
+                        if failed > 0 {
+                            return Err(format!(
+                                "downloaded, but {failed} of {} styles couldn't be activated",
+                                ids.len()
+                            ));
+                        }
+                    }
                     Ok(())
                 });
             results.push(match outcome {
-                Ok(()) => DownloadResult { family: name, ok: true, error: None },
-                Err(e) => DownloadResult { family: name, ok: false, error: Some(e) },
+                Ok(()) => DownloadResult {
+                    family: name,
+                    ok: true,
+                    error: None,
+                },
+                Err(e) => DownloadResult {
+                    family: name,
+                    ok: false,
+                    error: Some(e),
+                },
             });
         }
-        let _ = emitter.emit("google-download", DownloadProgress { family: String::new(), done: total, total });
+        let _ = emitter.emit(
+            "google-download",
+            DownloadProgress {
+                family: String::new(),
+                done: total,
+                total,
+            },
+        );
         if results.iter().any(|r| r.ok) {
             reapply_tags(st);
         }
@@ -473,7 +629,10 @@ pub async fn google_download(app: AppHandle, families: Vec<String>) -> CmdResult
 
 /// Serve a family's name-only preview file, downloading it once and caching it.
 /// Fetched by the Rust side, so the webview never contacts Google.
-pub fn serve_preview(st: &AppState, family: &str) -> Response<Vec<u8>> {
+///
+/// With `full`, serve the family's regular style in full instead, for previews
+/// of the user's own text. Fetched only when a sample is typed.
+pub fn serve_preview(st: &AppState, family: &str, full: bool) -> Response<Vec<u8>> {
     let respond = |status: StatusCode, msg: &str| {
         Response::builder()
             .status(status)
@@ -493,15 +652,27 @@ pub fn serve_preview(st: &AppState, family: &str) -> Response<Vec<u8>> {
     // Versioned file name: an updated family gets a fresh preview.
     let dir_name = google::family_dir(&g.previews, &fam.family);
     let path = dir_name.with_file_name(format!(
-        "{}-{}.ttf",
+        "{}-{}{}.ttf",
         dir_name.file_name().and_then(|n| n.to_str()).unwrap_or("_"),
-        fam.version
+        fam.version,
+        if full { "-full" } else { "" }
     ));
 
     let bytes = match std::fs::read(&path) {
         Ok(b) => Ok(b),
         Err(_) => {
-            let url = fam.menu.as_deref().or_else(|| fam.files.values().next().map(String::as_str));
+            let regular = || {
+                fam.files
+                    .get("regular")
+                    .or_else(|| fam.files.get("400"))
+                    .or_else(|| fam.files.values().next())
+                    .map(String::as_str)
+            };
+            let url = if full {
+                regular()
+            } else {
+                fam.menu.as_deref().or_else(regular)
+            };
             match url {
                 None => Err("no preview file".to_string()),
                 Some(url) => google::download_font(&g.endpoint, url)
@@ -523,5 +694,49 @@ pub fn serve_preview(st: &AppState, family: &str) -> Response<Vec<u8>> {
             .body(b)
             .expect("valid response"),
         Err(e) => respond(StatusCode::BAD_GATEWAY, &e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use font_core::google::Axis;
+
+    fn fam(variants: &[&str], axes: Vec<Axis>) -> GoogleFamily {
+        GoogleFamily {
+            family: "Test".into(),
+            variants: variants.iter().map(|v| v.to_string()).collect(),
+            subsets: vec![],
+            version: String::new(),
+            last_modified: String::new(),
+            files: Default::default(),
+            menu: None,
+            category: String::new(),
+            axes,
+            tags: vec![],
+        }
+    }
+
+    #[test]
+    fn weight_range_reads_variant_names() {
+        assert_eq!(
+            weight_range(&fam(&["regular", "italic"], vec![])),
+            [400.0, 400.0]
+        );
+        assert_eq!(
+            weight_range(&fam(&["300", "regular", "700italic"], vec![])),
+            [300.0, 700.0]
+        );
+        assert_eq!(weight_range(&fam(&[], vec![])), [400.0, 400.0]);
+    }
+
+    #[test]
+    fn weight_range_prefers_the_wght_axis() {
+        let axes = vec![Axis {
+            tag: "wght".into(),
+            start: 100.0,
+            end: 900.0,
+        }];
+        assert_eq!(weight_range(&fam(&["regular"], axes)), [100.0, 900.0]);
     }
 }

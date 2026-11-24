@@ -28,6 +28,17 @@ Cloud. Each family previews in its own typeface, and **Download** saves it into 
 managed library folder, after which it can be activated like any other font.
 Downloaded families show **Update** when Google publishes a new version.
 
+It has the library's view options: the same sample text, preview size, and
+list or grid. With no sample typed, each family shows its name from a tiny
+name-only file; once you type, rows load the family's regular style in full,
+fetched and cached by the Rust side as the row comes into view. The arrow
+beside a family opens a closer look: a waterfall, the alphabet and figures,
+and its category, styles, axes, scripts, tags and version.
+
+**Activate** downloads a family and switches it on in one step. Once a family
+is in your library, its row shows the same on/off circle as in My library, so
+it can be switched without leaving Google Fonts.
+
 How the integration behaves:
 
 - **The key** is checked with Google before it's saved. A key Google rejects is
@@ -45,6 +56,44 @@ How the integration behaves:
   update leaves nothing half-installed.
 - **The catalog is cached for a day**, and the cached copy is used, with a note,
   when Google can't be reached.
+
+### Searching, filtering and sorting
+
+My library and Google Fonts share one search, filter and sort system.
+
+**Search** matches family names and tags (and style names in the library;
+category and scripts in Google Fonts). Every word must match somewhere.
+`"small caps"` matches the phrase, and `-display` leaves out anything that
+mentions it. When nothing matches, close names are shown instead, so
+`montsrat` finds Montserrat, with a note saying so.
+
+**Filters** sit in a row under the sample text, one chip each:
+
+| Library | Google Fonts |
+|---|---|
+| Status (active, partly active, inactive, installed by the system), Traits (variable, static, has italics, monospaced), Weight, Width (condensed, normal, expanded), Styles, Tags, Format | Category, Status (not downloaded, in your library, active, update available), Traits, Weight, Styles, Scripts, Axes, Google's tags |
+
+- Each chip opens a panel. Lists show how many fonts each choice would leave
+  with the other filters applied, so a choice that empties the list is easy to
+  spot. Long lists (tags, scripts, axes) can be searched, and lists where a font
+  has several values can match **any** or **all** of the picked ones.
+- Weight and Styles are ranges: two handles, typed numbers, quick picks such as
+  "Bold to Black", and a bar per step showing how many fonts reach it. A
+  variable family counts for every weight its axis covers.
+- A set chip reads as what it's set to ("Weight 700 Bold or more"), with a ×
+  to remove it. **Clear all** appears once two are set. The row says "3 of 12
+  families" while filters narrow it.
+- Filters and order are remembered per view between launches. Search text
+  isn't, so an old search never hides fonts.
+
+**Sort** is the last control in the row. The library sorts by name, date
+modified, number of styles, weight range or activation; Google Fonts by
+popularity, name, last updated, number of styles or number of scripts. Each
+order starts in its natural direction (newest first, A to Z), and the arrow
+beside it reverses it. While a search is typed, the order switches to **Best
+match** (whole name, then the start of a name, then a word in it), without
+changing the saved order; equal matches in Google Fonts fall back to
+popularity.
 
 ### Variable fonts
 
@@ -415,13 +464,14 @@ Everything below was run, not just written. Linux is where it ran.
 
 | Area | Status |
 |---|---|
-| Tests | 79 pass, including 4 against every installed font and 2 against a mock Google Fonts server. Clippy clean. `npm run test:viewer` checks the pairing model and CSS/JSON export; `npm run test:features` the feature catalogue |
+| Tests | 81 pass, including 4 against every installed font and 2 against a mock Google Fonts server. Clippy clean. `npm run test:viewer` checks the pairing model and CSS/JSON export; `npm run test:features` the feature catalogue; `npm run test:query` search syntax, filters with counts and sorting |
 | TTC extraction | All 83 faces from 15 real collections (incl. 20 MB Noto CJK, CFF) pass fontTools with strict checksums and match the source face's glyphs, cmap and names |
 | Frontend | `svelte-check`: 0 errors, 0 warnings. 31 KB gzipped |
 | Large libraries | Measured in the running app against 10,000+ fonts; see below |
 | Google Fonts | Tested against a local mock of the API serving real font files: invalid key, disabled API, valid key, browsing, download, update, Google unreachable, key removal. **Not yet tested against Google's live API** (unreachable from the build sandbox) |
 | Key storage | File fallback tested (owner-only permissions confirmed). **The OS keychain path is untested**: the build machine had no keychain daemon |
 | Lucide icons | Every icon name in the app type-checks against the map in `Icon.svelte`, so none can be missing. Candidates were compared on a contact sheet at 16 and 32 px. In the real app: sidebar, rows, status bar, inspector, right-click menu and Settings. Changed after seeing it: Lucide's `contrast` read as a "D" at 16 px, so "some styles on" is Lucide's circle with its right half filled |
+| Search, filters, sorting | Unit tests (`test:query`) for search syntax, typo fallback, every facet, counts with other filters applied, any/all matching and each order. In a browser harness with real font files: each library and Google filter panel, weight bars lining up with the handles, sorting, typo search, `-` exclusion, Google's grid and list with typed samples loading full fonts, the closer look, and Activate sending one download-and-activate request. **Not yet run in the Tauri app**, and download-and-activate is untested against Google's live API |
 | Motion | Harness: each mode writes its timings, and the rail is caught mid-slide (margin −147px at 60ms of Snappy). The inspector slides in, a tab panel runs its entrance, and the palette animates open and stays mounted while it animates closed. Under None, panes and the palette change instantly. The choice survives a theme change and a reload. Real app: the setting in Settings, and the sidebar sliding open frame by frame. Found and fixed: applying a theme cleared every custom property on `<html>`, motion's timings included |
 | Outlines & metrics | Rust: path, point and handle building tested on a hand-made contour; on installed fonts, heights in order, H's top at the cap height, and nothing for a missing character. Against fontTools on Inter: H, g and a match on advance, side bearings, bounds and contours, as do the stated x-height and cap height. Real app: Ctrl+J and the status-bar icon; with and without the inspector, where the last font stays; Fill, Points and Smoothing; dragging the panel taller with Fit following; a typed size; selecting a glyph. Found and fixed: the drawing widening the list's column, the header pushing out the close button in narrow panels, and the slider rounding a fitted size and turning Fit off |
 | OpenType features | Rust, against fontTools on Inter 4: the feature tags with lookups, stylistic set and variant names (cv05 "Lower-case L with tail"), and every truncation of a hand-built GSUB failing safely. `npm run test:features`: hidden and unknown tags, names, ordering, defaults, exclusive pairs, CSS output. Real app with Inter: real fractions (½) when previewing `frac`, wider tabular figures, the cv03 preview changing exactly the 6, small caps carrying to the Specimen tab, and the tab counting changes. Harness: exclusivity, the reset staying reachable while a feature is focused |
