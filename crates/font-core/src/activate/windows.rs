@@ -17,7 +17,9 @@ use std::os::windows::ffi::{OsStrExt, OsStringExt};
 use std::path::{Path, PathBuf};
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
-use windows::Win32::Graphics::Gdi::{AddFontResourceExW, RemoveFontResourceExW, FR_NOT_ENUM};
+use windows::Win32::Graphics::Gdi::{
+    AddFontResourceExW, RemoveFontResourceExW, FONT_RESOURCE_CHARACTERISTICS, FR_NOT_ENUM,
+};
 use windows::Win32::System::Registry::{
     RegCloseKey, RegDeleteValueW, RegEnumValueW, RegOpenKeyExW, RegSetValueExW, HKEY,
     HKEY_CURRENT_USER, KEY_READ, KEY_WRITE, REG_SZ,
@@ -75,7 +77,7 @@ impl FontActivator for WindowsActivator {
 
         // 0 flags = session-wide and enumerable. FR_NOT_ENUM would hide it
         // from font pickers, which is the opposite of what we want.
-        let count = unsafe { AddFontResourceExW(PCWSTR(wpath.as_ptr()), 0, None) };
+        let count = unsafe { AddFontResourceExW(PCWSTR(wpath.as_ptr()), FONT_RESOURCE_CHARACTERISTICS(0), None) };
         let _ = FR_NOT_ENUM;
         if count == 0 {
             return Err(ActivationError::Refused {
@@ -108,7 +110,7 @@ impl FontActivator for WindowsActivator {
         // GDI reference-counts registrations; loop until it reports none left,
         // otherwise a font registered twice stays active after one removal.
         let mut guard = 0;
-        while unsafe { RemoveFontResourceExW(PCWSTR(wpath.as_ptr()), 0, None) }.as_bool() {
+        while unsafe { RemoveFontResourceExW(PCWSTR(wpath.as_ptr()), FONT_RESOURCE_CHARACTERISTICS(0), None) }.as_bool() {
             guard += 1;
             if guard > 64 {
                 break;
