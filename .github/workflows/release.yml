@@ -41,6 +41,24 @@ jobs:
 
       - run: npm ci
 
+      # Update signing is optional. Without the signing-key secrets the build
+      # still succeeds, just without update files, so installs are by hand.
+      # Add TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+      # as repository secrets to turn in-app updates on.
+      - name: Check for update signing key
+        id: signing
+        shell: bash
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            node -e "const f='src-tauri/tauri.conf.json';const c=JSON.parse(require('fs').readFileSync(f,'utf8'));c.bundle.createUpdaterArtifacts=false;require('fs').writeFileSync(f,JSON.stringify(c,null,2))"
+            echo "No signing key: building without update files."
+          fi
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -59,5 +77,5 @@ jobs:
           releaseDraft: true
           prerelease: false
           # latest.json, which the in-app updater reads.
-          includeUpdaterJson: true
+          includeUpdaterJson: ${{ steps.signing.outputs.signed == 'true' }}
           args: --features custom-protocol
